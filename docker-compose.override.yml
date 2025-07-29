@@ -1,41 +1,41 @@
+# Development overrides for docker-compose.yml
+# This file is automatically used by docker-compose when present
+# Use this for development with hot reloading and better debugging
+
 version: '3.8'
 
 services:
+  # Backend development overrides
+  backend:
+    build:
+      context: ./surfsense_backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./surfsense_backend:/app
+      - backend_uploads:/app/uploads
+      - backend_podcasts:/app/podcasts
+    environment:
+      - UVICORN_LOG_LEVEL=debug
+    command: ["python", "main.py", "--reload"]
+
+  # Frontend development overrides
   frontend:
-    build: ghcr.io/modsetter/surfsense_ui:latest
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+    build:
+      context: ./surfsense_web
+      dockerfile: Dockerfile.dev
     volumes:
       - ./surfsense_web:/app
       - /app/node_modules
-    depends_on:
-      - backend
+      - /app/.next
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://backend:8000}
+      - NODE_ENV=development
+    command: ["pnpm", "dev"]
 
-  backend:
-    build: ghcr.io/modsetter/surfsense_backend:latest
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
-    volumes:
-      - ./surfsense_backend:/app
-    depends_on:
-      - db
-    env_file:
-      - ./surfsense_backend/.env
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-surfsense}
-      - PYTHONPATH=/app
-      - UVICORN_LOOP=asyncio
-      - UNSTRUCTURED_HAS_PATCHED_LOOP=1
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - LANGCHAIN_TRACING_V2=false
-      - LANGSMITH_TRACING=false
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+  # Database development overrides (enable logging)
+  db:
+    command: >
+      postgres
+      -c log_statement=all
+      -c log_destination=stderr
+      -c log_min_messages=info
+      -c log_line_prefix='%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '

@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
 			},
 		],
 	},
+	output: "standalone",
 };
 
 // Wrap the config with createMDX

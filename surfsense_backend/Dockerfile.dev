@@ -1,4 +1,4 @@
-# Use Python 3.12 slim image for better performance and smaller size
+# Development Dockerfile for backend with hot reloading
 FROM python:3.12-slim
 
 # Set environment variables
@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Install system dependencies required for various Python packages
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
 # Set work directory
 WORKDIR /app
 
-# Install uv for faster dependency resolution and installation
+# Install uv for faster dependency management
 RUN pip install --no-cache-dir uv
 
 # Copy dependency files
@@ -34,23 +34,11 @@ COPY pyproject.toml uv.lock ./
 # Install Python dependencies using uv
 RUN uv pip install --system --no-cache -r pyproject.toml
 
-# Copy the application code
-COPY . .
-
 # Create necessary directories
 RUN mkdir -p uploads podcasts
 
-# Create a non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
-
-# Expose the port the app runs on
+# Expose the port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/verify-token || exit 1
-
-# Command to run the application
-CMD ["python", "main.py"]
+# Command for development with hot reloading
+CMD ["python", "main.py", "--reload"]
